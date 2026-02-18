@@ -63,6 +63,7 @@ from sympy.ntheory.factor_ import primefactors
 from sympy.polys.polytools import degree, lcm_list, gcd_list, Poly
 from sympy.simplify.radsimp import fraction
 from sympy.simplify.simplify import simplify
+from sympy.simplify.simplify import nsimplify
 from sympy.simplify.powsimp import powsimp
 from sympy.solvers.solvers import solve
 from sympy.strategies.core import switch, do_one, null_safe, condition
@@ -1979,6 +1980,43 @@ def sqrt_linear_rule(integral: IntegralInfo):
         return step
 
 
+def sqrt_fractional_linear_rule(integral : IntegralInfo):
+    """
+    Substitute (a*x + b)/(c*x + d)**(1/n)
+    """
+    integrand, x = integral
+    a = Wild('a', exclude=[x])
+    b = Wild('b', exclude=[x])
+    c = Wild('c', exclude=[x, 0])
+    d = Wild('d', exclude=[x])
+    for pow_ in integrand.find(Pow): # collect all (a*x + b)/(c*x + d)**(p/q)
+        base, exp_ = pow_.base, pow_.exp
+        if exp_.is_Integer or x not in base.free_symbols: # skip 1/x and sqrt(2)
+            continue
+        exp_ = nsimplify(exp_)
+        if not exp_.is_Rational: # exclude x**pi
+            return None
+        match = base.match((a*x + b)/(c*x + d))
+        if not match:
+            continue
+        aa, bb, cc, dd = match[a], match[b], match[c], match[d]
+        if (aa*dd - bb*cc) == 0: 
+            continue # constant value as sqrt((5*x + 10)/(2*x +  4)), later handled by simplify()
+        u = Dummy("u")
+        n = exp_.q
+        u_x = base**(S.One/n)
+        u_pow = u**n
+        x_u = (bb - dd*u_pow)/(cc*u_pow - aa)
+        dx_u = (n*(aa*dd - bb*cc)*u**(n - 1))/(cc*u_pow - aa)**2
+        substituted = (integrand.subs(base, u_pow).subs(x, x_u)*dx_u)
+        substituted = nsimplify(substituted.simplify())
+        substep = integral_steps(substituted, u)
+        if not substep.contains_dont_know():
+            step: Rule = URule(integrand, x, u, u_x, substep)
+            return step
+    return None
+
+
 def sqrt_quadratic_rule(integral: IntegralInfo, degenerate=True):
     integrand, x = integral
     a = Wild('a', exclude=[x])
@@ -2571,7 +2609,8 @@ def integral_steps(integrand, symbol, **options):
             Pow: do_one(null_safe(power_rule), null_safe(inverse_trig_rule),
                         null_safe(sqrt_linear_rule),
                         null_safe(quadratic_denom_rule),
-                        null_safe(sqrt_quadratic_rule)),
+                        null_safe(sqrt_quadratic_rule),
+                        null_safe(sqrt_fractional_linear_rule)),
             Symbol: power_rule,
             exp: exp_rule,
             Add: add_rule,
@@ -2579,6 +2618,7 @@ def integral_steps(integrand, symbol, **options):
                         null_safe(heaviside_rule), null_safe(quadratic_denom_rule),
                         null_safe(sqrt_linear_rule),
                         null_safe(sqrt_quadratic_rule),
+                        null_safe(sqrt_fractional_linear_rule),
                         null_safe(powsimp_rule),
                         null_safe(trig_cmplx_exp_rule)),
             Derivative: derivative_rule,
