@@ -1982,14 +1982,17 @@ def sqrt_linear_rule(integral: IntegralInfo):
 
 def sqrt_fractional_linear_rule(integral : IntegralInfo):
     """
-    Substitute (a*x + b)/(c*x + d)**(1/n)
+    Substitute common ((a*x + b)/(c*x + d))**(1/n)
     """
     integrand, x = integral
     a = Wild('a', exclude=[x])
     b = Wild('b', exclude=[x])
-    c = Wild('c', exclude=[x, 0])
+    c = Wild('c', exclude=[x])
     d = Wild('d', exclude=[x])
-    for pow_ in integrand.find(Pow): # collect all (a*x + b)/(c*x + d)**(p/q)
+    base0 = None
+    bases, qs, ratios = [], [], []
+    constant_bases_subs = {}
+    for pow_ in integrand.find(Pow): # collect all ((a*x + b)/(c*x + d))**(p/q)
         base, exp_ = pow_.base, pow_.exp
         if exp_.is_Integer or x not in base.free_symbols: # skip 1/x and sqrt(2)
             continue
@@ -2000,19 +2003,68 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
         if not match:
             continue
         aa, bb, cc, dd = match[a], match[b], match[c], match[d]
-        if (aa*dd - bb*cc) == 0: 
-            continue # constant value as sqrt((5*x + 10)/(2*x +  4)), later handled by simplify()
-        u = Dummy("u")
-        n = exp_.q
-        u_x = base**(S.One/n)
-        u_pow = u**n
-        x_u = (bb - dd*u_pow)/(cc*u_pow - aa)
-        dx_u = (n*(aa*dd - bb*cc)*u**(n - 1))/(cc*u_pow - aa)**2
-        substituted = (integrand.subs(base, u_pow).subs(x, x_u)*dx_u)
-        substituted = nsimplify(substituted.simplify())
-        substep = integral_steps(substituted, u)
+        if cc.is_zero and dd.is_zero:
+            return None
+        det = aa*dd - bb*cc
+        if det.is_zero: # constant value as sqrt((5*x + 10)/(2*x +  4))
+            const_val = (aa / cc) if not cc.is_zero else (bb / dd)
+            constant_bases_subs[base] = const_val
+            continue
+        if base0 is None:
+            base0 = base
+            a0, b0, c0, d0 = aa, bb, cc, dd
+            bases.append(base)
+            ratios.append(S.One)
+            qs.append(exp_.q)
+        else:
+            K = simplify(base / base0)
+            if K.has(x): # cannot substitute both sqrt(x) and sqrt(x+1)
+                return None
+            bases.append(base)
+            ratios.append(K)
+            qs.append(exp_.q)
+    if base0 is None and not constant_bases_subs:
+        return None
+    if constant_bases_subs:
+        integrand = integrand.subs(constant_bases_subs)
+    if base0 is None:
+        substep = integral_steps(integrand, x)
         if not substep.contains_dont_know():
-            step: Rule = URule(integrand, x, u, u_x, substep)
+            return RewriteRule(integral.integrand, integrand, substep)
+        return None
+    q0: Integer = lcm_list(qs)
+    u = Dummy("u")
+    u_x = base0**(S.One/q0)
+    u_pow = u**q0
+    x_u = (b0 - d0*u_pow)/(c0*u_pow - a0)
+    dx_u = (q0*(a0*d0 - b0*c0)*u**(q0 - 1))/(c0*u_pow - a0)**2
+    subs_dict = {}
+    for base_i, ratio_i, q_i in zip(bases, ratios, qs):
+        subs_dict[base_i**(S.One/q_i)] = (ratio_i)**(S.One/q_i) * u**(q0/q_i)
+    substituted = integrand.subs(subs_dict).subs(x, x_u) * dx_u
+    substep = integral_steps(substituted, u)
+    if not substep.contains_dont_know():
+        step: Rule = URule(integrand, x, u, u_x, substep)
+        generic_cond = Ne(a0*d0 - b0*c0, 0)
+        if generic_cond is not S.true:
+            pieces = [(step, generic_cond)]
+            cond_c0 = Ne(c0, 0)
+            if cond_c0 is not S.false:
+                const_val = a0 / c0
+                subs_a = {base_i: ratio_i * const_val for base_i, ratio_i in zip(bases, ratios)}
+                simplified_a = integrand.subs(subs_a)
+                degenerate_step_a = integral_steps(simplified_a, x)
+                pieces.append((degenerate_step_a, cond_c0))
+            if cond_c0 is not S.true:
+                const_val = b0 / d0
+                subs_b = {base_i: ratio_i * const_val for base_i, ratio_i in zip(bases, ratios)}
+                simplified_b = integrand.subs(subs_b)
+                degenerate_step_b = integral_steps(simplified_b, x)
+                pieces.append((degenerate_step_b, S.true))
+            step = PiecewiseRule(integrand, x, pieces)
+        if constant_bases_subs:
+            return RewriteRule(integral.integrand, integrand, step)
+        else:
             return step
     return None
 
