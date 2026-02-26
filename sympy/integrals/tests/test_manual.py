@@ -741,6 +741,31 @@ def test_manualintegrate_sqrt_linear():
                           (9*x/10 + 11*(4*x + 5)**(S(3)/2)/40 + sqrt(4*x + 5)/40 + (4*x + 5)**2/10 + S(11)/10)/2)
 
 
+def test_manualintegrate_sqrt_fractional_linear():
+    # https://github.com/sympy/sympy/issues/28945
+    f = sqrt((a - x)/(a + x))/x
+    F1 = (-4*a*(-log(sqrt((a - x)/(a + x)) - 1)/(4*a) + log(sqrt((a - x)/(a + x)) + 1)/(4*a)
+                - atan(sqrt((a - x)/(a + x)))/(2*a)))
+    F2 = I*log(x)
+    assert manualintegrate(f, x) == Piecewise((F1, Ne(a, 0)), (F2, True))
+    assert F1.diff(x).equals(f)
+    assert F2.diff(x).equals(f.subs(a, 0))
+    # linear dependent bases (2*x+2)/(x-1) and (x+1)/(x-1)
+    f = ((2*x+2)/(x-1))**(S.One/4)*sqrt(((x+1)/(x-1)))
+    F = (-8*2**(S.One/4)*(-((x + 1)/(x - 1))**(S.One/4)/(8*(sqrt((x + 1)/(x - 1)) + 1))
+         + 3*log(((x + 1)/(x - 1))**(S.One/4) - 1)/16 - 3*log(((x + 1)/(x - 1))**(S.One/4) + 1)/16
+         + 3*atan(((x + 1)/(x - 1))**(S.One/4))/8 - 1/(16*(((x + 1)/(x - 1))**(S.One/4) + 1))
+         - 1/(16*(((x + 1)/(x - 1))**(S.One/4) - 1))))
+    assert manualintegrate(f, x).equals(F)
+    assert F.diff(x).equals(f)
+    # constant values sqrt((2*x + 4)/(6*x + 12)) and ((2*a*x + 6*b) / (a*x + 3*b))**(S.One/3)
+    f = sqrt((2*x + 4)/(6*x + 12))*((2*a*x + 6*b) / (a*x + 3*b))**(S.One/3)*sqrt(((x+1)/(x-1)))
+    F = (-4*2**(S.One/3)*sqrt(3)*(log(sqrt((x + 1)/(x - 1)) - 1)/4 - log(sqrt((x + 1)/(x - 1)) + 1)/4
+        - 1/(4*(sqrt((x + 1)/(x - 1)) + 1)) - 1/(4*(sqrt((x + 1)/(x - 1)) - 1)))/3)
+    assert manualintegrate(f, x).equals(F)
+    assert F.diff(x).equals(f)
+
+
 def test_manualintegrate_sqrt_quadratic():
     assert_is_integral_of(1/sqrt((x - I)**2-1), log(2*x + 2*sqrt(x**2 - 2*I*x - 2) - 2*I))
     assert_is_integral_of(1/sqrt(3*x**2+4*x+5), sqrt(3)*asinh(3*sqrt(11)*(x + S(2)/3)/11)/3)

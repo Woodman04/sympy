@@ -63,7 +63,6 @@ from sympy.ntheory.factor_ import primefactors
 from sympy.polys.polytools import degree, lcm_list, gcd_list, Poly
 from sympy.simplify.radsimp import fraction
 from sympy.simplify.simplify import simplify
-from sympy.simplify.simplify import nsimplify
 from sympy.simplify.powsimp import powsimp
 from sympy.solvers.solvers import solve
 from sympy.strategies.core import switch, do_one, null_safe, condition
@@ -1996,7 +1995,6 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
         base, exp_ = pow_.base, pow_.exp
         if exp_.is_Integer or x not in base.free_symbols: # skip 1/x and sqrt(2)
             continue
-        exp_ = nsimplify(exp_)
         if not exp_.is_Rational: # exclude x**pi
             return None
         match = base.match((a*x + b)/(c*x + d))
@@ -2007,7 +2005,7 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
             return None
         det = aa*dd - bb*cc
         if det.is_zero: # constant value as sqrt((5*x + 10)/(2*x +  4))
-            const_val = (aa / cc) if not cc.is_zero else (bb / dd)
+            const_val = (S(aa) / cc) if not cc.is_zero else (S(bb) / dd)
             constant_bases_subs[base] = const_val
             continue
         if base0 is None:
@@ -2017,7 +2015,7 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
             ratios.append(S.One)
             qs.append(exp_.q)
         else:
-            K = simplify(base / base0)
+            K = (base / base0).cancel()
             if K.has(x): # cannot substitute both sqrt(x) and sqrt(x+1)
                 return None
             bases.append(base)
@@ -2030,7 +2028,7 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
     if base0 is None:
         substep = integral_steps(integrand, x)
         if not substep.contains_dont_know():
-            return RewriteRule(integral.integrand, integrand, substep)
+            return RewriteRule(integral.integrand, x, integrand, substep)
         return None
     q0: Integer = lcm_list(qs)
     u = Dummy("u")
@@ -2063,7 +2061,7 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
                 pieces.append((degenerate_step_b, S.true))
             step = PiecewiseRule(integrand, x, pieces)
         if constant_bases_subs:
-            return RewriteRule(integral.integrand, integrand, step)
+            return RewriteRule(integral.integrand, x, integrand, step)
         else:
             return step
     return None
