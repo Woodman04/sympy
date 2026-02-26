@@ -1997,10 +1997,13 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
             continue
         if not exp_.is_Rational: # exclude x**pi
             return None
-        match = base.match((a*x + b)/(c*x + d))
-        if not match:
+        num, den = base.as_numer_denom()
+        match_num = num.match(a*x + b)
+        match_den = den.match(c*x + d)
+        if not match_num or not match_den:
             continue
-        aa, bb, cc, dd = match[a], match[b], match[c], match[d]
+        aa, bb = match_num[a], match_num[b]
+        cc, dd = match_den[c], match_den[d]
         if cc.is_zero and dd.is_zero:
             return None
         det = aa*dd - bb*cc
