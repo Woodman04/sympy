@@ -2004,6 +2004,12 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
     substep = integral_steps(substituted, u)
     if not substep.contains_dont_know():
         step: Rule = URule(integrand, x, u, u_x, substep)
+        # in these cases, deteminant would be 0 only if both c0 and d0 were 0 (null denom), no need of Piecewise
+        if (c0.is_zero and (a0.is_zero is False)) or (d0.is_zero and (b0.is_zero is False)):
+            if constant_bases_subs:
+                return RewriteRule(integral.integrand, x, integrand, step)
+            else:
+                return step
         generic_cond = Ne(a0*d0 - b0*c0, 0)
         if generic_cond is not S.true:
             pieces: list[tuple[Rule, Boolean]] = [(step, generic_cond)]
