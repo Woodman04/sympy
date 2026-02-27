@@ -728,7 +728,7 @@ def test_manualintegrate_sqrt_linear():
                           10*(3*x + 2)**(S(7)/2)/567 - 4*(3*x + 2)**(S(5)/2)/27 +
                           40*(3*x + 2)**(S(3)/2)/81 + 136*sqrt(3*x + 2)/81)
     assert manualintegrate(x/sqrt(a+b*x)**3, x) == \
-        Piecewise((Mul(2, b**-2, a/sqrt(a + b*x) + sqrt(a + b*x)), Ne(b, 0)), (x**2/(2*a**(S(3)/2)), True))
+        Piecewise((Mul(-2, b**-2, -a/sqrt(a + b*x) - sqrt(a + b*x)), Ne(b, 0)), (x**2/(2*a**(S(3)/2)), True))
     assert_is_integral_of((sqrt(3*x+3)+1)/((2*x+2)**(1/S(3))+1),
                           3*sqrt(6)*(2*x + 2)**(S(7)/6)/14 - 3*sqrt(6)*(2*x + 2)**(S(5)/6)/10 -
                           3*sqrt(6)*(2*x + 2)**(S.One/6)/2 + 3*(2*x + 2)**(S(2)/3)/4 - 3*(2*x + 2)**(S.One/3)/2 +
@@ -783,13 +783,13 @@ def test_manualintegrate_sqrt_quadratic():
                           -7*sqrt(-3*x**2 + 4*x + 5)/3 + 32*sqrt(3)*asin(3*sqrt(19)*(x - S(2)/3)/19)/9)
     assert_is_integral_of((7*x+6)/sqrt(3*x**2+4*x-5),
                           7*sqrt(3*x**2 + 4*x - 5)/3 + 4*sqrt(3)*log(6*x + 2*sqrt(3)*sqrt(3*x**2 + 4*x - 5) + 4)/9)
-    assert manualintegrate((d+e*x)/sqrt(a+b*x+c*x**2), x) == \
+    assert manualintegrate((d+e*x)/sqrt(a+b*x+c*x**2), x).equals(
         Piecewise(((-b*e/(2*c) + d) *
                    Piecewise((log(b + 2*sqrt(c)*sqrt(a + b*x + c*x**2) + 2*c*x)/sqrt(c), Ne(a - b**2/(4*c), 0)),
                              ((b/(2*c) + x)*log(b/(2*c) + x)/sqrt(c*(b/(2*c) + x)**2), True)) +
                    e*sqrt(a + b*x + c*x**2)/c, Ne(c, 0)),
                   ((2*d*sqrt(a + b*x) + 2*e*(-a*sqrt(a + b*x) + (a + b*x)**(S(3)/2)/3)/b)/b, Ne(b, 0)),
-                  ((d*x + e*x**2/2)/sqrt(a), True))
+                  ((d*x + e*x**2/2)/sqrt(a), True)))
 
     assert manualintegrate((3*x**3-x**2+2*x-4)/sqrt(x**2-3*x+2), x) == \
         sqrt(x**2 - 3*x + 2)*(x**2 + 13*x/4 + S(101)/8) + 135*log(2*x + 2*sqrt(x**2 - 3*x + 2) - 3)/16
