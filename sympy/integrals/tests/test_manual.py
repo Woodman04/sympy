@@ -1,5 +1,4 @@
 from sympy.core.expr import Expr
-from sympy.core.mul import Mul
 from sympy.core.function import (Derivative, Function, diff, expand)
 from sympy.core.numbers import (I, Rational, pi)
 from sympy.core.relational import Ne
@@ -728,7 +727,7 @@ def test_manualintegrate_sqrt_linear():
                           10*(3*x + 2)**(S(7)/2)/567 - 4*(3*x + 2)**(S(5)/2)/27 +
                           40*(3*x + 2)**(S(3)/2)/81 + 136*sqrt(3*x + 2)/81)
     assert manualintegrate(x/sqrt(a+b*x)**3, x) == \
-        Piecewise((Mul(-2, b**-2, -a/sqrt(a + b*x) - sqrt(a + b*x)), Ne(b, 0)), (x**2/(2*a**(S(3)/2)), True))
+        Piecewise((-2*((-a/sqrt(a + b*x) - sqrt(a + b*x))/b**2), Ne(b, 0)), (x**2/(2*a**(S(3)/2)), True))
     assert_is_integral_of((sqrt(3*x+3)+1)/((2*x+2)**(1/S(3))+1),
                           3*sqrt(6)*(2*x + 2)**(S(7)/6)/14 - 3*sqrt(6)*(2*x + 2)**(S(5)/6)/10 -
                           3*sqrt(6)*(2*x + 2)**(S.One/6)/2 + 3*(2*x + 2)**(S(2)/3)/4 - 3*(2*x + 2)**(S.One/3)/2 +
@@ -748,9 +747,10 @@ def test_manualintegrate_sqrt_fractional_linear():
                 - atan(sqrt((a - x)/(a + x)))/(2*a)))
     F2 = I*log(x)
     assert manualintegrate(f, x) == Piecewise((F1, Ne(a, 0)), (F2, True))
-    assert F1.diff(x).equals(f)
-    assert F2.diff(x).equals(f.subs(a, 0))
-    # linear dependent bases (2*x+2)/(x-1) and (x+1)/(x-1)
+    F = Piecewise((F1, Ne(a, 0)), (F2, True))
+    assert (F1.diff(x) - f).cancel().factor() == 0
+    assert F2.diff(x) == f.subs(a, 0)
+    # linear dependent bases (2*x + 2)/(x - 1) and (x + 1)/(x - 1)
     f = ((2*x+2)/(x-1))**(S.One/4)*sqrt(((x+1)/(x-1)))
     F = (-8*2**(S.One/4)*(-((x + 1)/(x - 1))**(S.One/4)*S(1)/8/(sqrt((x + 1)/(x - 1)) + 1)
          + 3*log(((x + 1)/(x - 1))**(S.One/4) - 1)/16 - 3*log(((x + 1)/(x - 1))**(S.One/4) + 1)/16

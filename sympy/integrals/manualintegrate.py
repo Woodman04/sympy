@@ -1977,7 +1977,7 @@ def sqrt_fractional_linear_rule(integral : IntegralInfo):
             qs.append(exp_.q)
         else:
             K = (base / base0).cancel()
-            if K.has(x): # cannot substitute both sqrt(x) and sqrt(x+1)
+            if K.has(x): # cannot substitute both sqrt(x) and sqrt(x + 1)
                 return None
             bases.append(base)
             ratios.append(K)
