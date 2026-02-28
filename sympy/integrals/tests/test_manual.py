@@ -747,7 +747,6 @@ def test_manualintegrate_sqrt_fractional_linear():
                 - atan(sqrt((a - x)/(a + x)))/(2*a)))
     F2 = I*log(x)
     assert manualintegrate(f, x) == Piecewise((F1, Ne(a, 0)), (F2, True))
-    F = Piecewise((F1, Ne(a, 0)), (F2, True))
     assert (F1.diff(x) - f).cancel().factor() == 0
     assert F2.diff(x) == f.subs(a, 0)
     # linear dependent bases (2*x + 2)/(x - 1) and (x + 1)/(x - 1)
